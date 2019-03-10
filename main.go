@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/emreodabas/kubectl-demo/lessons/lesson"
 	"os"
 	"os/exec"
 	"strconv"
@@ -68,11 +67,12 @@ func startDemo() {
 	//commandRun("kubectl get ns " + kubeConfigCmd)
 }
 func showDemo(i int) {
-	lesson.new()
 }
-func loadLessonData(i int) interface{} {
+
+func loadLessonData(i int) {
 
 }
+
 func continueDemo() int {
 	return 1
 }
