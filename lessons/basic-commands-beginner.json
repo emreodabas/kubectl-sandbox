@@ -1,0 +1,26 @@
+{
+  "descriptions": [
+    {
+      "mainHeader": "Basic Commands- Beginner",
+      "header": "Create",
+      "data": " Creating resources from file, folder or stdin   kubectl create -f for from file."
+    },
+    {
+      "mainHeader": "Basic Commands- Beginner",
+      "header": "Create from file",
+      "data": " kubectl create -f  nginx.yaml  for from file."
+    }
+  ],
+  "quiz": [
+    {
+      "question": "Which options could be used for arranging output format?",
+      "options": [
+        "--no-headers",
+        "-o",
+        "-n",
+        "-f"
+      ],
+      "answer": "-o"
+    }
+  ]
+}
