@@ -7,13 +7,14 @@ import (
 	"os"
 )
 
-func Init(filePath string) {
+func Init(filePath string) (Lesson, error) {
 	// Open our jsonFile
 	jsonFile, err := os.Open(filePath)
 	// if we os.Open returns an error then handle it
 	if err != nil {
 		fmt.Println("ERROR!!")
 		fmt.Println(err)
+		return Lesson{}, err
 	}
 
 	fmt.Println("Successfully Opened " + filePath)
@@ -23,45 +24,32 @@ func Init(filePath string) {
 	// read our opened xmlFile as a byte array.
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 
-	fmt.Println(string(byteValue))
 	// we initialize our Users array
-	var lesson lesson
+	var lesson Lesson
 
 	// we unmarshal our byteArray which contains our
 	// jsonFile's content into 'users' which we defined above
 	json.Unmarshal(byteValue, &lesson)
-	fmt.Println(lesson)
 
-	showDescriptions(lesson.Descriptions)
-	showInteractions(lesson.InteractiveActions)
-	showQuizes(lesson.Quiz)
-}
-func showQuizes(questions []question) {
-
-}
-func showInteractions(actions []interactiveAction) {
-
-}
-func showDescriptions(cards []descriptionCard) {
-
+	return lesson, nil
 }
 
-type lesson struct {
-	Descriptions       []descriptionCard   `json:"descriptions"`
-	InteractiveActions []interactiveAction `json:"interactiveActions"`
-	Quiz               []question          `json:"quiz"`
+type Lesson struct {
+	Descriptions       []DescriptionCard   `json:"descriptions"`
+	InteractiveActions []InteractiveAction `json:"interactiveActions"`
+	Quiz               []Question          `json:"quiz"`
 }
 
-type descriptionCard struct {
+type DescriptionCard struct {
 	MainHeader string `json:"mainHeader"`
 	Header     string `json:"header"`
 	Data       string `json:"data"`
 }
 
-type interactiveAction struct {
+type InteractiveAction struct {
 }
 
-type question struct {
+type Question struct {
 	Question string   `json:"question"`
 	Options  []string `json:"options"`
 	Answer   string   `json:"answer"`
