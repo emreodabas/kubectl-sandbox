@@ -13,11 +13,17 @@ import (
 	"time"
 )
 
-var k3sLink = " https://github.com/rancher/k3s/releases/download/v0.2.0-rc5/k3s"
-var usr, _ = user.Current()
-var kubeHome = usr.HomeDir + "/.kube/"
-var path = kubeHome + "k3s"
-var kubeConfigCmd = "--kubeconfig " + kubeHome + "k3s.yaml"
+var (
+	k3sLink             = " https://github.com/rancher/k3s/releases/download/v0.2.0-rc5/k3s"
+	downloadPromptValue = " Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
+		" and sample files from github repo <<https://github.com/emreodabas/samples>>. " +
+		" Approximately 40mb file will download." +
+		"Do you agree with this  [y/N] ?? }"
+	usr, _        = user.Current()
+	kubeHome      = usr.HomeDir + "/.kube/"
+	path          = kubeHome + "k3s"
+	kubeConfigCmd = "--kubeconfig " + kubeHome + "k3s.yaml"
+)
 
 var selections = []selection{
 	{"intro.json", "1-> Introduction to kubectl", "kubectl controls the Kubernetes cluster manager.   \n" +
@@ -84,7 +90,6 @@ type selection struct {
 }
 
 func main() {
-	fmt.Println(kubeHome)
 	initK3s()
 }
 
@@ -130,7 +135,7 @@ func showDemo(s selection) {
 
 	lesson, _ := lessons.Init(s.filePath)
 	fmt.Println("Showing Descriptions")
-	drawing.ShowLesson(lesson, lessons.Desc, 1)
+	drawing.ShowLesson(lesson, lessons.Desc, 0)
 }
 
 //TODO
@@ -192,10 +197,7 @@ func loadDemoData() {
 }
 
 func installK3s() {
-	if Confirm(" Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
-		" and sample files from github repo <<https://github.com/emreodabas/samples>>. " +
-		" Approximately 40mb file will download." +
-		"Do you agree with this  [y/N] ?? }") {
+	if Confirm(downloadPromptValue) {
 		err := commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
@@ -247,45 +249,4 @@ func fileExists(name string) bool {
 		}
 	}
 	return true
-}
-
-//func Choose(promptValue string, list map[string]string) string {
-//	fmt.Println()
-//	for i, val := range list {
-//		fmt.Printf("  %d) %s\n", i+1, val)
-//	}
-//
-//	fmt.Println()
-//	i := ""
-//
-//	for {
-//		s := Prompt(promptValue)
-//
-//		n, err := strconv.Atoi(s)
-//		if err == nil {
-//			if n > 0 && n <= len(list) {
-//				i = n - 1
-//				break
-//			} else {
-//				continue
-//			}
-//		}
-//
-//		// value
-//		i = indexOf(s, list)
-//		if i != "" {
-//			break
-//		}
-//	}
-//
-//	return i
-//}
-
-func indexOf(s string, list map[string]string) string {
-	for i, val := range list {
-		if val == s {
-			return i
-		}
-	}
-	return ""
 }

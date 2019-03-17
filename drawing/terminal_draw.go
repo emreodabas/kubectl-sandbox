@@ -33,33 +33,37 @@ func ShowLesson(lesson lessons.Lesson, lessonType int, page int) error {
 	descDraw.page = page
 	descDraw.lessonType = lessonType
 	//if lessonType == lessons.Desc {
-	return descDraw.showDescriptions(lesson.Descriptions, page)
+	return descDraw.showLesson(lesson, lessonType, page)
 	//}else if lessonType == lessons.Quiz {
 
 	//}
 
 }
 
-func (drawer *lessonDrawer) showDescriptions(cards []lessons.DescriptionCard, i int) error {
+//func (drawer *lessonDrawer) showLesson(lesson lessons.Lesson, lessonType int, page int) error {
 
-	err := descDraw.showDescription(cards[i])
+//lesson navigation
+//	err := descDraw.showDescription(lesson, )
+//
+//	//switch {
+//	//case err == errBack:
+//	//	fmt.Println("go back")
+//	//	descDraw.page = i - 1
+//	//	descDraw.showDescription()
+//	//case err == errNext:
+//	//	fmt.Println("go next")
+//	//	descDraw.page = i + 1
+//	//	descDraw.showDescription()
+//	//default:
+//	//	fmt.Println(err.Error())
+//	//	return err
+//	//}
+//	return nil
+//}
 
-	switch {
-	case err == errBack:
-		fmt.Println("go back")
-		descDraw.showDescription(cards[i-1])
-	case err == errNext:
-		fmt.Println("go next")
-		descDraw.showDescription(cards[i+1])
-	default:
-		return err
-	}
-	return nil
-}
+func (drawer *lessonDrawer) showLesson(lesson lessons.Lesson, dataType int, page int) error {
 
-func (drawer *lessonDrawer) showDescription(card lessons.DescriptionCard) error {
-
-	if err := drawer.initDrawer("description"); err != nil {
+	if err := drawer.initDrawer(lesson, dataType, page); err != nil {
 		return err
 	}
 
@@ -71,14 +75,20 @@ func (drawer *lessonDrawer) showDescription(card lessons.DescriptionCard) error 
 		err := drawer.readKey()
 		switch {
 		case err == ErrAbort:
-			return err
+		case err == errBack:
+			goBack(lesson, dataType, page)
+		case err == errNext:
+			goNext(lesson, dataType, page)
 		case err != nil:
+			fmt.Println(err.Error())
+			return fmt.Errorf(err.Error(), "failed to read a key")
+		default:
 			return nil
 		}
 	}
 }
 
-func (drawer *lessonDrawer) initDrawer(dataType string) error {
+func (drawer *lessonDrawer) initDrawer(lesson lessons.Lesson, dataType int, page int) error {
 
 	if drawer.termbox == nil {
 		drawer.termbox = &termImpl{}
@@ -89,18 +99,18 @@ func (drawer *lessonDrawer) initDrawer(dataType string) error {
 	}
 	switch dataType {
 
-	case "description":
+	case lessons.Desc:
 		drawer.drawTimer = time.AfterFunc(0, func() {
-			drawer.drawDescription()
+			drawer.drawDescription(lesson.Descriptions, dataType, page)
 			drawer.termbox.flush()
 		})
 
-	case "quiz":
+	case lessons.Quiz:
 		drawer.drawTimer = time.AfterFunc(0, func() {
 			drawer.drawQuiz()
 			drawer.termbox.flush()
 		})
-	case "interactive":
+	case lessons.Interactive:
 		drawer.drawTimer = time.AfterFunc(0, func() {
 			drawer.drawInteractive()
 			drawer.termbox.flush()
@@ -109,7 +119,8 @@ func (drawer *lessonDrawer) initDrawer(dataType string) error {
 	drawer.drawTimer.Stop()
 	return nil
 }
-func (drawer *lessonDrawer) drawDescription() {
+
+func (drawer *lessonDrawer) drawDescription(cards []lessons.DescriptionCard, dataType int, page int) {
 
 	const pipeline = '│'
 	const backArrow = '<'
@@ -118,7 +129,7 @@ func (drawer *lessonDrawer) drawDescription() {
 
 	width, height := drawer.termbox.size()
 	drawer.termbox.clear(termbox.ColorDefault, termbox.ColorDefault)
-	card := drawer.getCard()
+	card := cards[page]
 	//fmt.Println("\n\t\t\t"+card.LessonHeader+"\n\n\n\t"+card.Header+"\t\n\n"+card.Data, "\n")
 	sp := strings.Split("\n\t\t\t"+card.LessonHeader+"\n\n\n\t"+card.Header+"\t\n\n"+card.Data, "\n")
 	prevLines := make([][]rune, 0, len(sp))
@@ -136,8 +147,8 @@ func (drawer *lessonDrawer) drawDescription() {
 	nextArrowRight := width - 5
 	arrowHeight := height - (height / descScreenRatio)
 
-	if isBackArrowExist() {
-		backValue := "  " + getBackValue() + " "
+	if isBackArrowExist(dataType, page) {
+		backValue := "  " + getBackValue(dataType, page) + " "
 		for i := backArrowLeft; i < backArrowRight; i++ {
 			switch {
 			case i == backArrowLeft:
@@ -157,8 +168,8 @@ func (drawer *lessonDrawer) drawDescription() {
 		}
 
 	}
-	if isNextArrowExist() {
-		nextValue := "  " + getNextValue() + " "
+	if isNextArrowExist(len(cards), dataType, page) {
+		nextValue := "  " + getNextValue(len(cards), dataType, page) + " "
 		for i := nextArrowLeft; i < nextArrowRight; i++ {
 			switch {
 			case i == nextArrowRight-1:
@@ -176,9 +187,7 @@ func (drawer *lessonDrawer) drawDescription() {
 
 			}
 		}
-
 	}
-
 	//case i == nextArrowRight:
 	//drawer.termbox.setCell(i, h, nextArrow, termbox.ColorBlack, termbox.ColorDefault)
 
@@ -252,39 +261,6 @@ func (drawer *lessonDrawer) drawDescription() {
 	}
 
 }
-func getBackValue() string {
-	if descDraw.lessonType == lessons.Desc {
-		return descDraw.lesson.Descriptions[descDraw.page-1].Header
-	} else if descDraw.lessonType == lessons.Quiz {
-		return string(descDraw.page-1) + ". Question"
-	} else {
-		return string(descDraw.page-1) + ". Lab"
-	}
-}
-func getNextValue() string {
-	if descDraw.lessonType == lessons.Desc {
-		return descDraw.lesson.Descriptions[descDraw.page+1].Header
-	} else if descDraw.lessonType == lessons.Quiz {
-		return string(descDraw.page+1) + ". Question"
-	} else {
-		return string(descDraw.page+1) + ". Lab"
-	}
-}
-
-//TODO
-func isNextArrowExist() bool {
-	if descDraw.lessonType == lessons.Desc {
-		return descDraw.page+1 < len(descDraw.lesson.Descriptions)
-	} else if descDraw.lessonType == lessons.Quiz {
-		return descDraw.page+1 < len(descDraw.lesson.Quiz)
-	} else {
-		return descDraw.page+1 < len(descDraw.lesson.InteractiveActions)
-	}
-}
-
-func isBackArrowExist() bool {
-	return descDraw.page > 0
-}
 
 func (drawer *lessonDrawer) drawQuiz() {
 
@@ -310,17 +286,12 @@ func (drawer *lessonDrawer) readKey() error {
 		case termbox.KeyDelete:
 
 		case termbox.KeyArrowDown, termbox.KeyArrowLeft, termbox.KeyCtrlB:
-			fmt.Println("keypressed for back")
-			isBackArrowExist()
-			{
-				fmt.Println("keypressed for back and is back arrow exist")
-				return errBack
-			}
+			return errBack
+			return fmt.Errorf("error no back arrow exist")
 		case termbox.KeyArrowUp, termbox.KeyArrowRight, termbox.KeyCtrlF, termbox.KeyEnter:
-			isNextArrowExist()
-			{
-				return errNext
-			}
+			descDraw.rwMutex.RLock()
+			defer descDraw.rwMutex.RUnlock()
+			return errNext
 		case termbox.KeyCtrlA:
 
 		case termbox.KeyCtrlE:
@@ -331,7 +302,7 @@ func (drawer *lessonDrawer) readKey() error {
 		case termbox.KeyCtrlJ, termbox.KeyCtrlN:
 		case termbox.KeyTab:
 		default:
-			//fmt.Println(e.Ch)
+			fmt.Println(e.Ch)
 		}
 	case termbox.EventResize:
 		// To get actual window size, clear all buffers.
@@ -341,14 +312,115 @@ func (drawer *lessonDrawer) readKey() error {
 	}
 	return nil
 }
-func (drawer *lessonDrawer) getCard() lessons.DescriptionCard {
-	return descDraw.lesson.Descriptions[descDraw.page]
+func (drawer *lessonDrawer) showEndPage() {
+	//TODO
+	fmt.Println("congratulations")
 }
 
-func goBack() {
-
+func goBack(lesson lessons.Lesson, dataType int, page int) {
+	if dataType == lessons.Desc {
+		descDraw.showLesson(lesson, dataType, page-1)
+	} else if dataType == lessons.Interactive {
+		if page == 0 {
+			descDraw.showLesson(lesson, lessons.Desc, len(lesson.Descriptions)-1)
+		} else {
+			descDraw.showLesson(lesson, dataType, page-1)
+		}
+	} else if dataType == lessons.Quiz {
+		if page == 0 {
+			descDraw.showLesson(lesson, lessons.Interactive, len(lesson.InteractiveActions)-1)
+		} else {
+			descDraw.showLesson(lesson, dataType, page-1)
+		}
+	}
 }
 
-func goForward() {
+func goNext(lesson lessons.Lesson, dataType int, page int) {
+	if dataType == lessons.Desc {
+		if len(lesson.Descriptions) == page+1 {
+			descDraw.showLesson(lesson, lessons.Interactive, 0)
+		} else {
+			descDraw.showLesson(lesson, dataType, page+1)
+		}
+	} else if dataType == lessons.Interactive {
+		if len(lesson.InteractiveActions) == page+1 {
+			descDraw.showLesson(lesson, lessons.Quiz, 0)
+		} else {
+			descDraw.showLesson(lesson, dataType, page+1)
+		}
+	} else if dataType == lessons.Quiz {
+		if len(lesson.Quiz) == page+1 {
+			descDraw.showEndPage()
+		} else {
+			descDraw.showLesson(lesson, dataType, page+1)
+		}
+	}
+}
 
+//TODO
+func isNextArrowExist(length int, dataType int, page int) bool {
+	if dataType == lessons.Desc {
+		return !(length == page+1 && descDraw.lesson.InteractiveActions != nil && descDraw.lesson.Quiz != nil)
+	} else if dataType == lessons.Interactive {
+		return !(length == page+1 && descDraw.lesson.Quiz != nil)
+	} else if dataType == lessons.Quiz {
+		return !(length == page+1)
+	}
+	return false
+}
+
+func isBackArrowExist(dataType int, page int) bool {
+	if dataType == lessons.Desc {
+		return !(page == 0)
+	} else if dataType == lessons.Interactive {
+		return !(page == 0 && descDraw.lesson.Descriptions != nil)
+	} else if dataType == lessons.Quiz {
+		return !(page == 0 && descDraw.lesson.InteractiveActions != nil && descDraw.lesson.Descriptions != nil)
+	}
+	return false
+}
+
+func getBackValue(dataType int, page int) string {
+	if dataType == lessons.Desc {
+		return descDraw.lesson.Descriptions[page-1].Header
+	} else if dataType == lessons.Interactive {
+		if page == 0 && descDraw.lesson.Descriptions != nil {
+			return descDraw.lesson.Descriptions[len(descDraw.lesson.Descriptions)-1].Header
+		} else {
+			return string(page-1) + ". Lab"
+		}
+
+	} else if dataType == lessons.Quiz {
+		if page == 0 && descDraw.lesson.InteractiveActions != nil {
+			return string(len(descDraw.lesson.InteractiveActions)) + ". Lab"
+		} else if page == 0 && descDraw.lesson.Descriptions != nil {
+			return descDraw.lesson.Descriptions[len(descDraw.lesson.Descriptions)-1].Header
+		} else {
+			return string(page-1) + ". Question"
+		}
+	} else {
+		return "ERROR -- getBackValue :)"
+	}
+}
+func getNextValue(length int, dataType int, page int) string {
+	if dataType == lessons.Desc {
+		if length == page+1 && descDraw.lesson.InteractiveActions != nil {
+			return "1. Lab"
+		} else if length == page+1 && descDraw.lesson.Quiz != nil {
+			return "1. Question"
+		} else {
+			return descDraw.lesson.Descriptions[page+1].Header
+		}
+
+	} else if dataType == lessons.Interactive {
+		if length == page+1 && descDraw.lesson.Quiz != nil {
+			return "1. Question"
+		} else {
+			return string(page+1) + ". Lab"
+		}
+	} else if dataType == lessons.Quiz {
+		return string(page+1) + ". Question"
+	} else {
+		return "getNextValue"
+	}
 }

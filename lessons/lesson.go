@@ -18,7 +18,6 @@ func Init(filePath string) (Lesson, error) {
 	}
 
 	fmt.Println("Successfully Opened " + filePath)
-	// defer the closing of our jsonFile so that we can parse it later on
 	defer jsonFile.Close()
 
 	// read our opened xmlFile as a byte array.
