@@ -34,6 +34,12 @@ func Init(filePath string) (Lesson, error) {
 	return lesson, nil
 }
 
+const (
+	Desc int = iota
+	Quiz
+	Interactive
+)
+
 type Lesson struct {
 	Descriptions       []DescriptionCard   `json:"descriptions"`
 	InteractiveActions []InteractiveAction `json:"interactiveActions"`
@@ -41,9 +47,9 @@ type Lesson struct {
 }
 
 type DescriptionCard struct {
-	MainHeader string `json:"mainHeader"`
-	Header     string `json:"header"`
-	Data       string `json:"data"`
+	LessonHeader string `json:"mainHeader"`
+	Header       string `json:"header"`
+	Data         string `json:"data"`
 }
 
 type InteractiveAction struct {

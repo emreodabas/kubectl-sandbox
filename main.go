@@ -1,8 +1,9 @@
 package main
 
 import (
+	"./drawing"
+	"./lessons"
 	"fmt"
-	"github.com/emreodabas/kubectl-demo/lessons"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"log"
 	"os"
@@ -126,13 +127,18 @@ func startDemo() {
 	//commandRun("kubectl get ns " + kubeConfigCmd)
 }
 func showDemo(s selection) {
-	lessons.Init(s.filePath)
 
+	lesson, _ := lessons.Init(s.filePath)
+	fmt.Println("Showing Descriptions")
+	drawing.ShowLesson(lesson, lessons.Desc, 1)
 }
 
+//TODO
 func continueDemo() int {
 	return 1
 }
+
+//TODO
 func isDemoStarted() bool {
 	return false
 }

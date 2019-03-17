@@ -9,6 +9,16 @@
       "mainHeader": "Basic Commands- Beginner",
       "header": "Create from file",
       "data": " kubectl create -f  nginx.yaml  for from file."
+    },
+    {
+      "mainHeader": "Basic Commands- Beginner",
+      "header": "Create from stdin",
+      "data": " kubectl create -f  nginx.yaml  for from file."
+    },
+    {
+      "mainHeader": "Basic Commands- Beginner",
+      "header": "Create with --from-file",
+      "data": " kubectl create -f  nginx.yaml  for from file."
     }
   ],
   "quiz": [
