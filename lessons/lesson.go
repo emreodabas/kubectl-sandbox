@@ -40,18 +40,18 @@ const (
 )
 
 type Lesson struct {
-	Descriptions       []DescriptionCard   `json:"descriptions"`
-	InteractiveActions []InteractiveAction `json:"interactiveActions"`
-	Quiz               []Question          `json:"quiz"`
+	Descriptions []Description `json:"descriptions"`
+	Labs         []Lab         `json:"interactiveActions"`
+	Quiz         []Question    `json:"quiz"`
 }
 
-type DescriptionCard struct {
+type Description struct {
 	LessonHeader string `json:"mainHeader"`
 	Header       string `json:"header"`
 	Data         string `json:"data"`
 }
 
-type InteractiveAction struct {
+type Lab struct {
 }
 
 type Question struct {
