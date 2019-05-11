@@ -1,11 +1,8 @@
 package main
 
 import (
-	"./drawing"
-	"./lessons"
+	"bufio"
 	"fmt"
-	"github.com/ktr0731/go-fuzzyfinder"
-	"log"
 	"os"
 	"os/exec"
 	"os/user"
@@ -14,83 +11,46 @@ import (
 )
 
 var (
-	k3sLink             = " https://github.com/rancher/k3s/releases/download/v0.2.0-rc5/k3s"
-	downloadPromptValue = " Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
-		" and sample files from github repo <<https://github.com/emreodabas/samples>>. " +
-		" Approximately 40mb file will download." +
-		"Do you agree with this  [y/N] ?? }"
 	usr, _        = user.Current()
 	kubeHome      = usr.HomeDir + "/.kube/"
-	path          = kubeHome + "k3s"
+	path          = usr.HomeDir + "/.kube/k3s"
 	kubeConfigCmd = "--kubeconfig " + kubeHome + "k3s.yaml"
+	rancherPath   = usr.HomeDir + "/.rancher/"
 )
 
-var selections = []selection{
-	{"intro.json", "1-> Introduction to kubectl", "kubectl controls the Kubernetes cluster manager.   \n" +
-		"  \n" +
-		"Find more information at: https://kubernetes.io/docs/reference/kubectl/overview/  \n" +
-		"  \n" +
-		"Usage:  \n" +
-		"  kubectl [flags] [options]  \n" +
-		"Use \"kubectl <command> --help\" for more information about a given command.  \n" +
-		"Use \"kubectl options\" for a list of global command-line options (applies to all commands). "},
-	{"lessons/basic-commands-beginner.json", "2-> Basic Commands (Beginner)", "\n \t create         Create a resource from a file or from stdin.  \n " +
-		"\t expose         Take a replication controller, service, deployment or pod and  expose it as a new Kubernetes Service  \n " +
-		"\t run            Run a particular image on the cluster  \n " +
-		"\t set            Set specific features on objects  \n " +
-		"   \n "},
-	{"basic-commands-intermediate.json", "3-> Basic Commands (Intermediate) ", "\n \t explain        Documentation of resources  \n " +
-		"\t get            Display one or many resources  \n " +
-		"\t edit           Edit a resource on the server  \n " +
-		"\t delete         Delete resources by filenames, stdin, resources and names, or by resources and label selector  \n " +
-		"   \n "},
-	{"deploy-commands.json", "4-> Deploy Commands ", "\n \t rollout        Manage the rollout of a resource  \n " +
-		"\t scale          Set a new size for a Deployment, ReplicaSet, Replication  Controller, or Job  \n " +
-		"\t autoscale      Auto-scale a Deployment, ReplicaSet, or ReplicationController  \n " +
-		"   \n "},
-	{"cluster-managements-commands.json", "5-> Cluster Management Commands ", "\n \t certificate    Modify certificate resources.  \n " +
-		"\t cluster-info   Display cluster info  \n " +
-		"\t top            Display Resource (CPU/Memory/Storage) usage.  \n " +
-		"\t cordon         Mark node as unschedulable  \n " +
-		"\t uncordon       Mark node as schedulable  \n " +
-		"\t drain          Drain node in preparation for maintenance  \n " +
-		"\t taint          Update the taints on one or more nodes  \n " +
-		"   \n "},
-	{"troubleshooting-debugging-commands.json", "6-> Troubleshooting and Debugging Commands ", "\n \t describe       Show details of a specific resource or group of resources  \n " +
-		"\t logs           Print the logs for a container in a pod  \n " +
-		"\t attach         Attach to a running container  \n " +
-		"\t exec           Execute a command in a container  \n " +
-		"\t port-forward   Forward one or more local ports to a pod  \n " +
-		"\t proxy          Run a proxy to the Kubernetes API server  \n " +
-		"\t cp             Copy files and directories to and from containers.  \n " +
-		"\t auth           Inspect authorization  \n " +
-		"   \n "},
-	{"advanced-commands.json", "7-> Advanced Commands ", "\n \t diff           Diff live version against would-be applied version  \n " +
-		"\t apply          Apply a configuration to a resource by filename or stdin  \n " +
-		"\t patch          Update field(s) of a resource using strategic merge patch  \n " +
-		"\t replace        Replace a resource by filename or stdin  \n " +
-		"\t wait           Experimental: Wait for a specific condition on one or many resources.  \n " +
-		"\t convert        Convert config files between different API versions  \n " +
-		"   \n "},
-	{"settings-commands.json", "8-> Settings Commands ", "\n \t label          Update the labels on a resource  \n " +
-		"\t annotate       Update the annotations on a resource  \n " +
-		"\t completion     Output shell completion code for the specified shell (bash or zsh)  \n " +
-		"   \n "},
-	{"other-commands.json", "9-> Other Commands ", "\n \t api-resources  Print the supported API resources on the server  \n " +
-		"\t api-versions   Print the supported API versions on the server, in the form of \"group/version\"  \n " +
-		"\t config         Modify kubeconfig files  \n " +
-		"\t plugin         Provides utilities for interacting with plugins.  \n " +
-		"\t version        Print the client and server version information  \n "},
-}
-
-type selection struct {
-	filePath    string
-	name        string
-	description string
-}
+const (
+	env                     = "DEV"
+	k3sLink                 = " https://github.com/rancher/k3s/releases/download/v0.5.0/k3s"
+	loadDemoDataPromptValue = " You could load sample demo data to your Kubernetes Instance. Do you want to install/reset demo data [y/N] ?"
+	downloadPromptValue     = " Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
+		" and sample files from github repo <<https://github.com/emreodabas/samples>>. " +
+		" Approximately 40mb file will download." +
+		"Do you agree with this  [y/N] ? "
+	resetK3sPromtValue = "kubectl demo will remove your k3s instance. Do you want to continue [y/N] ? "
+)
 
 func main() {
-	initK3s()
+	argsWithoutProg := os.Args[1:]
+	if len(argsWithoutProg) == 0 {
+		initK3s()
+	} else {
+		switch argsWithoutProg[0] {
+
+		case "reset":
+			if Confirm(resetK3sPromtValue) {
+				uninstallK3s()
+			}
+			initK3s()
+
+		}
+	}
+}
+func uninstallK3s() {
+
+	stopServer()
+	commandRun("rm " + path)
+	commandRun("rm " + kubeHome + "k3s.* ")
+	commandRun("rm -R " + rancherPath)
 }
 
 func initK3s() {
@@ -98,7 +58,6 @@ func initK3s() {
 	if !isInstalled() {
 		fmt.Println("Starting K3s installation")
 		installK3s()
-		//loadDemoData()
 	}
 	if startK3sServer() {
 		fmt.Println("Server succesfully started")
@@ -107,8 +66,47 @@ func initK3s() {
 		return
 	}
 
-	startDemo()
+	loadDemoData()
+
+	createTerminal()
+
 	defer stopServer()
+}
+func createTerminal() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Printf("\033[1;36m%s\033[0m", "kubectl-demo$ ")
+		cmdString, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		err = runCommand(cmdString)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+}
+
+func runCommand(commandStr string) error {
+	commandStr = strings.TrimSuffix(commandStr, "\n")
+	if strings.Contains(commandStr, "kubectl") {
+		commandStr = commandStr + " " + kubeConfigCmd
+	}
+	arrCommandStr := strings.Fields(commandStr)
+
+	if len(arrCommandStr) != 0 {
+		switch arrCommandStr[0] {
+		case "exit", "quit", "q":
+			os.Exit(0)
+			// add another case here for custom commands.
+		}
+	}
+
+	cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	fmt.Println(cmd.Args)
+	return cmd.Run()
 }
 
 func stopServer() {
@@ -118,54 +116,6 @@ func stopServer() {
 		fmt.Printf(" Server start failed %v\n", err)
 		return
 	}
-}
-
-func startDemo() {
-	var item int
-	if isDemoStarted() {
-		item = continueDemo()
-		Confirm("Do you want to continue ? [Y/N] ")
-	} else {
-		item = showDemoList()
-	}
-	showDemo(selections[item])
-	//commandRun("kubectl get ns " + kubeConfigCmd)
-}
-func showDemo(s selection) {
-
-	lesson, _ := lessons.Init(s.filePath)
-	fmt.Println("Showing Descriptions")
-	drawing.ShowLesson(lesson, lessons.Desc, 0)
-}
-
-//TODO
-func continueDemo() int {
-	return 1
-}
-
-//TODO
-func isDemoStarted() bool {
-	return false
-}
-
-func showDemoList() int {
-	idx, err := fuzzyfinder.FindMulti(
-		selections,
-		func(i int) string {
-			return selections[i].name
-		},
-		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
-			if i == -1 {
-				return ""
-			}
-			return fmt.Sprintf("Name: %s \nDescription: %s",
-				strings.SplitAfter(selections[i].name, "> ")[1],
-				selections[i].description)
-		}))
-	if err != nil {
-		log.Fatal(err)
-	}
-	return idx[0]
 }
 
 func startK3sServer() bool {
@@ -179,8 +129,13 @@ func startK3sServer() bool {
 
 }
 func serverHealth() bool {
-	for start := time.Now(); time.Since(start) < time.Second; {
 
+	if !fileExists(rancherPath) {
+		fmt.Println("waiting for first configuration of Rancher")
+		time.Sleep(time.Second * 5)
+	}
+
+	for start := time.Now(); time.Since(start) < time.Second*10; {
 		bytes, _ := commandRunAndReturn("kubectl get ns " + kubeConfigCmd + " | grep default")
 		output := string(bytes)
 		if strings.Contains(output, "default") {
@@ -193,16 +148,28 @@ func serverHealth() bool {
 
 // TODO Demo yamls need to define
 func loadDemoData() {
-
+	if Confirm(loadDemoDataPromptValue) {
+		commandRun("kubectl apply " + kubeConfigCmd + " -f https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml ")
+	}
 }
 
 func installK3s() {
 	if Confirm(downloadPromptValue) {
-		err := commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
+		var err error
+		if env == "DEV" {
+			err = commandRun("cp " + usr.HomeDir + "/Documents/k3s/k3s05 " + kubeHome + "/k3s")
+		} else {
+			err = commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
+		}
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
-			return
 		}
+	} else {
+		fmt.Println("Kubectl Demo is just useless without k3s. \n " +
+			"=============================================== \n  " +
+			"====> May the Kubernetes be with you :) <====== \n " +
+			"=============================================== \n ")
+		os.Exit(0)
 	}
 }
 
