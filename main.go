@@ -15,7 +15,7 @@ var (
 	kubeHome      = usr.HomeDir + "/.kube/"
 	path          = usr.HomeDir + "/.kube/k3s"
 	kubeConfigCmd = "--kubeconfig " + kubeHome + "k3s.yaml"
-	rancherPath   = usr.HomeDir + "/.rancher/"
+	rancherPath   = usr.HomeDir + "/.rancher/k3s/"
 )
 
 const (
