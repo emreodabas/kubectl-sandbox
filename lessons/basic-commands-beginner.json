@@ -20,17 +20,5 @@
       "header": "Create with --from-file",
       "data": " kubectl create -f  nginx.yaml   --from-file for from file."
     }
-  ],
-  "quiz": [
-    {
-      "question": "Which options could be used for arranging output format?",
-      "options": [
-        "--no-headers",
-        "-o",
-        "-n",
-        "-f"
-      ],
-      "answer": "-o"
-    }
   ]
 }

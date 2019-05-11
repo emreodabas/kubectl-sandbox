@@ -208,7 +208,7 @@ func installK3s() {
 
 func isInstalled() bool {
 	fmt.Println(path)
-	return fileExists(path)
+	return fileExists(path) || fileExists(kubeHome+"k3s")
 }
 
 // Confirm continues prompting until the input is boolean-ish.
