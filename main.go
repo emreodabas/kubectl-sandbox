@@ -14,12 +14,12 @@ var (
 	usr, _        = user.Current()
 	kubeHome      = usr.HomeDir + "/.kube/"
 	path          = usr.HomeDir + "/.kube/k3s"
-	kubeConfigCmd = "--kubeconfig " + kubeHome + "k3s.yaml"
+	kubeConfigCmd = "--kubeconfig /etc/rancher/k3s/k3s.yaml"
 	rancherPath   = usr.HomeDir + "/.rancher/k3s/"
 )
 
 const (
-	env                     = "DEV"
+	env                     = "DE2V"
 	k3sLink                 = " https://github.com/rancher/k3s/releases/download/v0.5.0/k3s"
 	loadDemoDataPromptValue = " You could load sample demo data to your Kubernetes Instance. Do you want to install/reset demo data [y/N] ?"
 	downloadPromptValue     = " Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
@@ -80,7 +80,9 @@ func createTerminal() {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		err = runCommand(cmdString)
+		if cmdString != "" {
+			err = runCommand(cmdString)
+		}
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
@@ -101,17 +103,24 @@ func runCommand(commandStr string) error {
 			// add another case here for custom commands.
 		}
 	}
-
-	cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	fmt.Println(cmd.Args)
-	return cmd.Run()
+	if len(arrCommandStr) > 1 {
+		cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		return cmd.Run()
+	} else if len(arrCommandStr) == 1 {
+		cmd := exec.Command(arrCommandStr[0])
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		return cmd.Run()
+	}
+	return nil
 }
 
 func stopServer() {
 	fmt.Println("Stopping K3s server")
-	err := commandRun("pkill k3s")
+	err := commandRun("systemctl stop k3s")
+	//err := commandRun("pkill k3s")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return
@@ -120,7 +129,9 @@ func stopServer() {
 
 func startK3sServer() bool {
 	fmt.Println("Starting K3s server")
-	err := commandRun("nohup ~/.kube/k3s server --disable-agent  > ~/.kube/k3s.log 2>&1 &")
+	err := commandRun("sudo systemctl start k3s ")
+	//err := commandRun("sudo ~/.kube/k3s server > ~/.kube/k3s.log 2>&1 &")
+	//err = commandRun("nohup ~/.kube/k3s agent --server localhost  > ~/.kube/k3s.log 2>&1 &")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return false
@@ -130,19 +141,34 @@ func startK3sServer() bool {
 }
 func serverHealth() bool {
 
-	if !fileExists(rancherPath) {
-		fmt.Println("waiting for first configuration of Rancher")
-		time.Sleep(time.Second * 5)
-	}
-
 	for start := time.Now(); time.Since(start) < time.Second*10; {
-		bytes, _ := commandRunAndReturn("kubectl get ns " + kubeConfigCmd + " | grep default")
-		output := string(bytes)
-		if strings.Contains(output, "default") {
+		cmd := exec.Command("systemctl", "check", " k3s")
+		bytes, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("System service check error %v\n", err)
+		}
+
+		if strings.Contains(string(bytes), "active") {
 			return true
+		} else {
+			time.Sleep(time.Second)
 		}
 	}
 	return false
+
+	//if !fileExists(rancherPath) {
+	//	fmt.Println("waiting for first configuration of Rancher")
+	//	time.Sleep(time.Second * 5)
+	//}
+	//
+	//for start := time.Now(); time.Since(start) < time.Second*10; {
+	//	bytes, _ := commandRunAndReturn("kubectl get ns " + kubeConfigCmd + " | grep default")
+	//	output := string(bytes)
+	//	if strings.Contains(output, "default") {
+	//		return true
+	//	}
+	//}
+	//return false
 
 }
 
@@ -159,7 +185,8 @@ func installK3s() {
 		if env == "DEV" {
 			err = commandRun("cp " + usr.HomeDir + "/Documents/k3s/k3s05 " + kubeHome + "/k3s")
 		} else {
-			err = commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
+			err = commandRun("cd " + usr.HomeDir + " && curl -sfL https://get.k3s.io | sh -")
+			//err = commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
 		}
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
@@ -174,8 +201,20 @@ func installK3s() {
 }
 
 func isInstalled() bool {
-	fmt.Println(path)
-	return fileExists(path) || fileExists(kubeHome+"k3s")
+	fmt.Println("IsInstalled")
+	cmd := exec.Command("systemctl", "status", "k3s")
+	bytes, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("System service status error %v\n", err)
+	}
+	if strings.Contains(string(bytes), "could not be found") {
+		return false
+	} else if strings.Contains(string(bytes), "active") {
+		return true
+	} else {
+		return false
+	}
+	//return fileExists(path) || fileExists(kubeHome+"k3s")
 }
 
 // Confirm continues prompting until the input is boolean-ish.
