@@ -1,30 +1,25 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"github.com/peterh/liner"
+	"log"
 	"os"
 	"os/exec"
-	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 var (
-	usr, _        = user.Current()
-	kubeHome      = usr.HomeDir + "/.kube/"
-	path          = usr.HomeDir + "/.kube/k3s"
 	kubeConfigCmd = "--kubeconfig /etc/rancher/k3s/k3s.yaml"
-	rancherPath   = usr.HomeDir + "/.rancher/k3s/"
+	history_fn    = filepath.Join(os.TempDir(), ".liner_example_history")
+	keywords      = []string{"kubectl", "create", "update", "delete", "deployment"}
 )
 
 const (
-	env                     = "DE2V"
-	k3sLink                 = " https://github.com/rancher/k3s/releases/download/v0.5.0/k3s"
-	loadDemoDataPromptValue = " You could load sample demo data to your Kubernetes Instance. Do you want to install/reset demo data [y/N] ?"
-	downloadPromptValue     = " Kubectl Demo will download k3s (lighweight kubernetes) <<https://github.com/rancher/k3s/releases>> \n" +
-		" and sample files from github repo <<https://github.com/emreodabas/samples>>. " +
-		" Approximately 40mb file will download." +
+	downloadPromptValue = " Kubectl Demo will download k3s (lighweight kubernetes detail in https://k3s.io/ ) \n" +
+		"and create systemctl service approximately 40mb file will download." +
 		"Do you agree with this  [y/N] ? "
 	resetK3sPromtValue = "kubectl demo will remove your k3s instance. Do you want to continue [y/N] ? "
 )
@@ -36,7 +31,7 @@ func main() {
 	} else {
 		switch argsWithoutProg[0] {
 
-		case "reset":
+		case "uninstall", "remove", "delete":
 			if Confirm(resetK3sPromtValue) {
 				uninstallK3s()
 			}
@@ -48,9 +43,8 @@ func main() {
 func uninstallK3s() {
 
 	stopServer()
-	commandRun("rm " + path)
-	commandRun("rm " + kubeHome + "k3s.* ")
-	commandRun("rm -R " + rancherPath)
+	commandRun("/usr/local/bin/k3s-uninstall.sh")
+
 }
 
 func initK3s() {
@@ -62,29 +56,53 @@ func initK3s() {
 	if startK3sServer() {
 		fmt.Println("Server succesfully started")
 	} else {
-		fmt.Println("Server start error. You could check details in ~/.kube/k3s.log ")
+		fmt.Println("Server start error. You could check details in k3s service log ")
 		return
 	}
 
-	loadDemoData()
+	//loadDemoData()
 
 	createTerminal()
 
 	defer stopServer()
 }
 func createTerminal() {
-	reader := bufio.NewReader(os.Stdin)
+	line := liner.NewLiner()
+	defer line.Close()
+
+	line.SetCtrlCAborts(true)
+
+	line.SetCompleter(func(line string) (c []string) {
+		for _, n := range keywords {
+			if strings.HasPrefix(n, strings.ToLower(line)) {
+				c = append(c, n)
+			}
+		}
+		return
+	})
+
+	if f, err := os.Open(history_fn); err == nil {
+		line.ReadHistory(f)
+		f.Close()
+	}
 	for {
-		fmt.Printf("\033[1;36m%s\033[0m", "kubectl-demo$ ")
-		cmdString, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-		if cmdString != "" {
+		if cmdString, err := line.Prompt("kubectl-demo$ "); err == nil {
+			line.AppendHistory(cmdString)
+			if strings.Contains(cmdString, "exit") || strings.Contains(cmdString, "quit") {
+				return
+			}
 			err = runCommand(cmdString)
+		} else if err == liner.ErrPromptAborted {
+			return
+		} else {
+			log.Print("Error reading line: ", err)
+			return
 		}
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if f, err := os.Create(history_fn); err != nil {
+			log.Print("Error writing history file: ", err)
+		} else {
+			line.WriteHistory(f)
+			f.Close()
 		}
 	}
 }
@@ -96,13 +114,6 @@ func runCommand(commandStr string) error {
 	}
 	arrCommandStr := strings.Fields(commandStr)
 
-	if len(arrCommandStr) != 0 {
-		switch arrCommandStr[0] {
-		case "exit", "quit", "q":
-			os.Exit(0)
-			// add another case here for custom commands.
-		}
-	}
 	if len(arrCommandStr) > 1 {
 		cmd := exec.Command(arrCommandStr[0], arrCommandStr[1:]...)
 		cmd.Stderr = os.Stderr
@@ -120,7 +131,6 @@ func runCommand(commandStr string) error {
 func stopServer() {
 	fmt.Println("Stopping K3s server")
 	err := commandRun("systemctl stop k3s")
-	//err := commandRun("pkill k3s")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return
@@ -129,9 +139,7 @@ func stopServer() {
 
 func startK3sServer() bool {
 	fmt.Println("Starting K3s server")
-	err := commandRun("sudo systemctl start k3s ")
-	//err := commandRun("sudo ~/.kube/k3s server > ~/.kube/k3s.log 2>&1 &")
-	//err = commandRun("nohup ~/.kube/k3s agent --server localhost  > ~/.kube/k3s.log 2>&1 &")
+	err := commandRun("systemctl start k3s ")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return false
@@ -143,10 +151,7 @@ func serverHealth() bool {
 
 	for start := time.Now(); time.Since(start) < time.Second*10; {
 		cmd := exec.Command("systemctl", "check", " k3s")
-		bytes, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Printf("System service check error %v\n", err)
-		}
+		bytes, _ := cmd.CombinedOutput()
 
 		if strings.Contains(string(bytes), "active") {
 			return true
@@ -156,38 +161,11 @@ func serverHealth() bool {
 	}
 	return false
 
-	//if !fileExists(rancherPath) {
-	//	fmt.Println("waiting for first configuration of Rancher")
-	//	time.Sleep(time.Second * 5)
-	//}
-	//
-	//for start := time.Now(); time.Since(start) < time.Second*10; {
-	//	bytes, _ := commandRunAndReturn("kubectl get ns " + kubeConfigCmd + " | grep default")
-	//	output := string(bytes)
-	//	if strings.Contains(output, "default") {
-	//		return true
-	//	}
-	//}
-	//return false
-
-}
-
-// TODO Demo yamls need to define
-func loadDemoData() {
-	if Confirm(loadDemoDataPromptValue) {
-		commandRun("kubectl apply " + kubeConfigCmd + " -f https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml ")
-	}
 }
 
 func installK3s() {
 	if Confirm(downloadPromptValue) {
-		var err error
-		if env == "DEV" {
-			err = commandRun("cp " + usr.HomeDir + "/Documents/k3s/k3s05 " + kubeHome + "/k3s")
-		} else {
-			err = commandRun("cd " + usr.HomeDir + " && curl -sfL https://get.k3s.io | sh -")
-			//err = commandRun("wget" + k3sLink + "  && chmod +x k3s && mv k3s " + kubeHome)
-		}
+		err := commandRun("cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | sh -")
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
 		}
@@ -201,23 +179,20 @@ func installK3s() {
 }
 
 func isInstalled() bool {
-	fmt.Println("IsInstalled")
 	cmd := exec.Command("systemctl", "status", "k3s")
-	bytes, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("System service status error %v\n", err)
-	}
+	bytes, _ := cmd.CombinedOutput()
 	if strings.Contains(string(bytes), "could not be found") {
+		fmt.Println("installation could not be found")
 		return false
-	} else if strings.Contains(string(bytes), "active") {
+	} else if strings.Contains(string(bytes), "active") || strings.Contains(string(bytes), "k3s.io") {
+		fmt.Println("installation and service active")
 		return true
 	} else {
+		fmt.Println("installation error" + string(bytes))
 		return false
 	}
-	//return fileExists(path) || fileExists(kubeHome+"k3s")
 }
 
-// Confirm continues prompting until the input is boolean-ish.
 func Confirm(promptValue string, args ...interface{}) bool {
 	for {
 		switch Prompt(promptValue, args...) {
@@ -241,18 +216,4 @@ func commandRun(command string) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
-}
-
-func commandRunAndReturn(command string) ([]byte, error) {
-	cmd := exec.Command("/bin/sh", "-c", command)
-	return cmd.CombinedOutput()
-}
-
-func fileExists(name string) bool {
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-	}
-	return true
 }
