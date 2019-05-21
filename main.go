@@ -40,10 +40,10 @@ func main() {
 		}
 	}
 }
-func uninstallK3s() {
+func uninstallK3s() error {
 
 	stopServer()
-	commandRun("/usr/local/bin/k3s-uninstall.sh")
+	return commandRun("/usr/local/bin/k3s-uninstall.sh")
 
 }
 
@@ -79,7 +79,10 @@ func createTerminal() {
 	})
 
 	if f, err := os.Open(history_fn); err == nil {
-		line.ReadHistory(f)
+		_, err := line.ReadHistory(f)
+		if err != nil {
+			fmt.Println("Error while history read")
+		}
 		f.Close()
 	}
 	for {
@@ -98,7 +101,10 @@ func createTerminal() {
 		if f, err := os.Create(history_fn); err != nil {
 			log.Print("Error writing history file: ", err)
 		} else {
-			line.WriteHistory(f)
+			_, err := line.WriteHistory(f)
+			if err != nil {
+				fmt.Println("Error while history write")
+			}
 			f.Close()
 		}
 	}
@@ -204,7 +210,10 @@ func Confirm(promptValue string, args ...interface{}) bool {
 func Prompt(prompt string, args ...interface{}) string {
 	var s string
 	fmt.Printf(prompt+": ", args...)
-	fmt.Scanln(&s)
+	_, err := fmt.Scanln(&s)
+	if err != nil {
+		fmt.Println("Prompt value could not read")
+	}
 	return s
 }
 
