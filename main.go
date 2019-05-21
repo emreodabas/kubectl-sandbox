@@ -13,7 +13,7 @@ import (
 
 var (
 	kubeConfigCmd = "--kubeconfig /etc/rancher/k3s/k3s.yaml"
-	history_fn    = filepath.Join(os.TempDir(), ".liner_example_history")
+	history       = filepath.Join(os.TempDir(), ".liner_example_history")
 	keywords      = []string{"kubectl", "create", "update", "delete", "deployment"}
 )
 
@@ -33,7 +33,10 @@ func main() {
 
 		case "uninstall", "remove", "delete":
 			if Confirm(resetK3sPromtValue) {
-				uninstallK3s()
+				err := uninstallK3s()
+				if err != nil {
+					fmt.Println("Error while uninstall K3s")
+				}
 			}
 			initK3s()
 
@@ -65,7 +68,12 @@ func initK3s() {
 }
 func createTerminal() {
 	line := liner.NewLiner()
-	defer line.Close()
+	defer func() {
+		e := line.Close()
+		if e != nil {
+			fmt.Println("Error while history file close with defer")
+		}
+	}()
 
 	line.SetCtrlCAborts(true)
 
@@ -78,12 +86,15 @@ func createTerminal() {
 		return
 	})
 
-	if f, err := os.Open(history_fn); err == nil {
+	if f, err := os.Open(history); err == nil {
 		_, err := line.ReadHistory(f)
 		if err != nil {
 			fmt.Println("Error while history read")
 		}
-		f.Close()
+		er := f.Close()
+		if er != nil {
+			fmt.Println("Error while history file close")
+		}
 	}
 	for {
 		if cmdString, err := line.Prompt("kubectl-demo$ "); err == nil {
@@ -98,14 +109,17 @@ func createTerminal() {
 			log.Print("Error reading line: ", err)
 			return
 		}
-		if f, err := os.Create(history_fn); err != nil {
+		if f, err := os.Create(history); err != nil {
 			log.Print("Error writing history file: ", err)
 		} else {
 			_, err := line.WriteHistory(f)
 			if err != nil {
 				fmt.Println("Error while history write")
 			}
-			f.Close()
+			er := f.Close()
+			if er != nil {
+				fmt.Println("Error while history file close")
+			}
 		}
 	}
 }
