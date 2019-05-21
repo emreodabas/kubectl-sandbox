@@ -60,10 +60,7 @@ func initK3s() {
 		return
 	}
 
-	//loadDemoData()
-
 	createTerminal()
-
 	defer stopServer()
 }
 func createTerminal() {
