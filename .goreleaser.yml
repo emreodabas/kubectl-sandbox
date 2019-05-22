@@ -13,7 +13,6 @@ builds:
   main: .
   goos:
     - freebsd
-    - windows
     - linux
     - darwin
   goarch:
