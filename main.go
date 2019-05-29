@@ -18,10 +18,10 @@ var (
 )
 
 const (
-	downloadPromptValue = " Kubectl Demo will download k3s (lighweight kubernetes detail in https://k3s.io/ ) \n" +
+	downloadPromptValue = " Kubectl Sandbox will download k3s (lighweight kubernetes detail in https://k3s.io/ ) \n" +
 		"and create systemctl service approximately 40mb file will download." +
 		"Do you agree with this  [y/N] ? "
-	resetK3sPromtValue = "kubectl demo will remove your k3s instance. Do you want to continue [y/N] ? "
+	resetK3sPromtValue = "kubectl sandbox will remove your k3s instance. Do you want to continue [y/N] ? "
 )
 
 func main() {
@@ -97,7 +97,7 @@ func createTerminal() {
 		}
 	}
 	for {
-		if cmdString, err := line.Prompt("kubectl-demo$ "); err == nil {
+		if cmdString, err := line.Prompt("kubectl-sandbox$ "); err == nil {
 			line.AppendHistory(cmdString)
 			if strings.Contains(cmdString, "exit") || strings.Contains(cmdString, "quit") {
 				return
@@ -187,7 +187,7 @@ func installK3s() {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
 		}
 	} else {
-		fmt.Println("Kubectl Demo is just useless without k3s. \n " +
+		fmt.Println("Kubectl Sandbox is just useless without k3s. \n " +
 			"=============================================== \n  " +
 			"====> May the Kubernetes be with you :) <====== \n " +
 			"=============================================== \n ")
