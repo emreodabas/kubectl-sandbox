@@ -21,25 +21,39 @@ const (
 	downloadPromptValue = " Kubectl Sandbox will download k3s (lighweight kubernetes detail in https://k3s.io/ ) \n" +
 		"and create systemctl service approximately 40mb file will download." +
 		"Do you agree with this  [y/N] ? "
-	resetK3sPromtValue = "kubectl sandbox will remove your k3s instance. Do you want to continue [y/N] ? "
+	loadDemoDataPromptValue = " You could load sample demo data to your Kubernetes Instance. Do you want to install/reset demo data [y/N] ?"
+	deletek3sPromptValue    = "kubectl sandbox will delete your k3s instance. Do you want to continue [y/N] ? "
+	resetk3sPromptValue     = "kubectl sandbox will delete and install your k3s instance. Do you want to continue [y/N] ? "
 )
 
 func main() {
 	argsWithoutProg := os.Args[1:]
 	if len(argsWithoutProg) == 0 {
-		initK3s()
+		initK3s(false)
 	} else {
 		switch argsWithoutProg[0] {
 
 		case "uninstall", "remove", "delete":
-			if Confirm(resetK3sPromtValue) {
+			if Confirm(deletek3sPromptValue) {
 				err := uninstallK3s()
 				if err != nil {
 					fmt.Println("Error while uninstall K3s")
 				}
 			}
-			initK3s()
 
+		case "reset":
+			if Confirm(resetk3sPromptValue) {
+				err := uninstallK3s()
+				if err != nil {
+					fmt.Println("Error while uninstall K3s")
+				}
+				installK3s()
+			}
+			initK3s(false)
+		case "load":
+			initK3s(true)
+		default:
+			initK3s(false)
 		}
 	}
 }
@@ -50,17 +64,22 @@ func uninstallK3s() error {
 
 }
 
-func initK3s() {
+func initK3s(loadData bool) {
 
 	if !isInstalled() {
 		fmt.Println("Starting K3s installation")
 		installK3s()
+		loadData = true
 	}
 	if startK3sServer() {
 		fmt.Println("Server succesfully started")
 	} else {
 		fmt.Println("Server start error. You could check details in k3s service log ")
 		return
+	}
+
+	if loadData {
+		loadDemoData()
 	}
 
 	createTerminal()
@@ -207,6 +226,15 @@ func isInstalled() bool {
 	} else {
 		fmt.Println("installation error" + string(bytes))
 		return false
+	}
+}
+
+func loadDemoData() {
+	if Confirm(loadDemoDataPromptValue) {
+		err := commandRun("kubectl apply " + kubeConfigCmd + " -f https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml ")
+		if err != nil {
+			fmt.Println("Loading sample data error")
+		}
 	}
 }
 
