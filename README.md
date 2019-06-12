@@ -9,6 +9,6 @@ Kubectl Sandbox plugin gives you sandbox environment for kubectl. It will downlo
  ```
 
 - `kubectl sandbox` configure environment and start your sandbox
-- `kubectl sandbox load` load sample data for your k3s instance
+- `kubectl sandbox load` load sample data for your k3s instance 
 - `kubectl sandbox delete` delete your k3s instance
 - `kubectl sandbox reset` reset your k3s instance
