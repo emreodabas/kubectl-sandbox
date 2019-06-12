@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -121,12 +123,12 @@ func createTerminal() {
 			if strings.Contains(cmdString, "exit") || strings.Contains(cmdString, "quit") {
 				return
 			}
+			signal.Ignore(syscall.SIGINT)
 			err = runCommand(cmdString)
 		} else if err == liner.ErrPromptAborted {
 			return
 		} else {
 			log.Print("Error reading line: ", err)
-			return
 		}
 		if f, err := os.Create(history); err != nil {
 			log.Print("Error writing history file: ", err)
@@ -159,6 +161,7 @@ func runCommand(commandStr string) error {
 		cmd := exec.Command(arrCommandStr[0])
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
+
 		return cmd.Run()
 	}
 	return nil
@@ -166,7 +169,7 @@ func runCommand(commandStr string) error {
 
 func stopServer() {
 	fmt.Println("Stopping K3s server")
-	err := commandRun("systemctl stop k3s")
+	err := commandSudoRun("systemctl stop k3s")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return
@@ -175,7 +178,7 @@ func stopServer() {
 
 func startK3sServer() bool {
 	fmt.Println("Starting K3s server")
-	err := commandRun("systemctl start k3s ")
+	err := commandSudoRun("systemctl start k3s ")
 	if err != nil {
 		fmt.Printf(" Server start failed %v\n", err)
 		return false
@@ -201,7 +204,7 @@ func serverHealth() bool {
 
 func installK3s() {
 	if Confirm(downloadPromptValue) {
-		err := commandRun("cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | sh -")
+		err := commandSudoRun("cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | sh -")
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
 		}
@@ -261,6 +264,13 @@ func Prompt(prompt string, args ...interface{}) string {
 
 func commandRun(command string) error {
 	cmd := exec.Command("/bin/sh", "-c", command)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return cmd.Run()
+}
+
+func commandSudoRun(command string) error {
+	cmd := exec.Command("/bin/sh", "-c", "sudo "+command)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	return cmd.Run()
