@@ -88,6 +88,7 @@ func initK3s(loadData bool) {
 	defer stopServer()
 }
 func createTerminal() {
+	fmt.Println("You could exit terminal with exit|quit commands or Ctrl+C|Ctrl+D ")
 	line := liner.NewLiner()
 	defer func() {
 		e := line.Close()
@@ -125,10 +126,14 @@ func createTerminal() {
 			}
 			signal.Ignore(syscall.SIGINT)
 			err = runCommand(cmdString)
+			if err != nil {
+				fmt.Println(err)
+			}
 		} else if err == liner.ErrPromptAborted {
 			return
 		} else {
-			log.Print("Error reading line: ", err)
+			//CTRL+D
+			return
 		}
 		if f, err := os.Create(history); err != nil {
 			log.Print("Error writing history file: ", err)
@@ -203,11 +208,20 @@ func serverHealth() bool {
 }
 
 func installK3s() {
+
 	if Confirm(downloadPromptValue) {
-		err := commandSudoRun("cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | sh -")
+		var command = ""
+		if isKubectlAvailable() {
+			command = "cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | INSTALL_K3S_BIN_DIR_READ_ONLY=\"false\" sh -s - "
+		} else {
+			command = "cd " + os.TempDir() + " && curl -sfL https://get.k3s.io | sh -s - "
+		}
+		fmt.Println(command)
+		err := commandRun(command)
 		if err != nil {
 			fmt.Printf("Download k3s failed please try again %v\n", err)
 		}
+
 	} else {
 		fmt.Println("Kubectl Sandbox is just useless without k3s. \n " +
 			"=============================================== \n  " +
@@ -260,6 +274,15 @@ func Prompt(prompt string, args ...interface{}) string {
 		fmt.Println("Prompt value could not read")
 	}
 	return s
+}
+
+func isKubectlAvailable() bool {
+	cmd := exec.Command("/bin/sh", "-c", "command -v kubectl")
+	if err := cmd.Run(); err != nil {
+		fmt.Println(err)
+		return false
+	}
+	return true
 }
 
 func commandRun(command string) error {
