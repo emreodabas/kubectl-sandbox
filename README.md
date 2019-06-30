@@ -18,12 +18,12 @@ Kubectl Sandbox plugin gives you sandbox environment for kubectl. It will downlo
 
 ## Installation
 
- Download binary for your OS
+ Download binary
  https://github.com/emreodabas/kubectl-sandbox/releases/latest
  
  ```
 mkdir -p /opt/kubectl-plugins
-tar xzvf kubectl-sandbox_{version_OS}.tar.gz -C /opt/kubectl-plugins
+tar xzvf kubectl-sandbox_{version}.tar.gz -C /opt/kubectl-plugins
 sudo ln -s /opt/kubectl-plugins/kubectl-sandbox /usr/local/bin/kubectl-sandbox
 
  ```
