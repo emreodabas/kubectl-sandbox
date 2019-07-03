@@ -5,7 +5,7 @@ Kubectl Sandbox plugin gives you sandbox environment for kubectl. It will downlo
 #### spoiler alert
 
  ```                  
-              Plugin works/tested only for linux distributions
+              Plugin works only for linux distributions
               This plugin needs ROOT access to create|start|stop|delete k3s service.
               
  ```
