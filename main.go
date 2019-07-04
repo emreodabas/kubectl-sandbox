@@ -62,7 +62,7 @@ func main() {
 func uninstallK3s() error {
 
 	stopServer()
-	return commandRun("/usr/local/bin/k3s-uninstall.sh")
+	return commandSudoRun("/usr/local/bin/k3s-uninstall.sh")
 
 }
 
@@ -153,7 +153,7 @@ func createTerminal() {
 func runCommand(commandStr string) error {
 	commandStr = strings.TrimSuffix(commandStr, "\n")
 	if strings.Contains(commandStr, "kubectl") {
-		commandStr = commandStr + " " + kubeConfigCmd
+		commandStr = "sudo " + commandStr + " " + kubeConfigCmd
 	}
 	arrCommandStr := strings.Fields(commandStr)
 
@@ -248,7 +248,7 @@ func isInstalled() bool {
 
 func loadDemoData() {
 	if Confirm(loadDemoDataPromptValue) {
-		err := commandRun("kubectl apply " + kubeConfigCmd + " -f https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml ")
+		err := commandSudoRun("kubectl apply " + kubeConfigCmd + " -f https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml ")
 		if err != nil {
 			fmt.Println("Loading sample data error")
 		}
