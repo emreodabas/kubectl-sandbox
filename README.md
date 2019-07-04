@@ -11,9 +11,13 @@ Kubectl Sandbox plugin gives you sandbox environment for kubectl. It will downlo
  ```
 
 - `kubectl sandbox` configure environment and start your sandbox
+![kubectl-sandbox GIF](img/install-cropped.gif)
 - `kubectl sandbox load` load sample app [(guestbook)](https://raw.githubusercontent.com/kubernetes/examples/master/guestbook/all-in-one/guestbook-all-in-one.yaml) for your k3s instance 
+![kubectl-sandbox load GIF](img/load-cropped.gif)
 - `kubectl sandbox delete` delete your k3s instance
+![kubectl-sandbox delete GIF](img/delete-cropped.gif)
 - `kubectl sandbox reset` reset your k3s instance
+ delete and install new instance
 
 
 ## Installation
