@@ -152,7 +152,9 @@ func createTerminal() {
 
 func runCommand(commandStr string) error {
 	commandStr = strings.TrimSuffix(commandStr, "\n")
-	if strings.Contains(commandStr, "kubectl") {
+	if strings.Contains(commandStr, "kubectl sandbox") {
+		commandStr = " echo \"kubectl sandbox in kubectl sandbox could be deadlock. YOU SHALL NOT PASS :) \" "
+	} else if strings.Contains(commandStr, "kubectl") {
 		commandStr = "sudo " + commandStr + " " + kubeConfigCmd
 	}
 	arrCommandStr := strings.Fields(commandStr)
