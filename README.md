@@ -17,6 +17,7 @@ Kubectl Sandbox plugin gives you sandbox environment for kubectl. It will downlo
 - `kubectl sandbox delete` delete your k3s instance
 ![kubectl-sandbox delete GIF](img/delete-cropped.gif)
 - `kubectl sandbox reset` reset your k3s instance
+ delete and install new instance
 
 
 ## Installation
